@@ -2,8 +2,8 @@ name: Stock News AI Agent
 
 on:
   schedule:
-    - cron: '0 22,10 * * 1-5' # รันทุกวันจันทร์-ศุกร์ เวลาตี 5 และ 5 โมงเย็น (เวลาไทย)
-  workflow_dispatch: # เปิดให้กดปุ่มรันเองได้
+    - cron: '0 22,10 * * 1-5'
+  workflow_dispatch:
 
 jobs:
   run-bot:
@@ -28,3 +28,9 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python main.py
+
+      - name: Run Crypto News Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DISCORD_WEBHOOK_URL_CRYPTO: ${{ secrets.DISCORD_WEBHOOK_URL_CRYPTO }}
+        run: python crypto_agent.py
