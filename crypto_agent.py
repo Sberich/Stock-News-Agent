@@ -70,9 +70,9 @@ Below is a list of recent crypto news headlines and short summaries.
 Your task:
 1. Select 6 to 10 MOST IMPORTANT news items that have the biggest impact on the Crypto market (Bitcoin, Ethereum, major Altcoins, regulation, ETFs, tech upgrades).
 2. For each selected news, TRANSLATE the title into THAI language.
-3. Provide a DETAILED analysis translated into THAI language.
-4. Format the 'analysis' field to be engaging and easy to read using bullet points (\\n). Include:
-   - 📖 เนื้อหาข่าว (Detailed summary of what happened)
+3. Provide a DETAILED and COMPREHENSIVE analysis translated into THAI language. Do not make it too short.
+4. Format the 'analysis' field to be engaging and easy to read using bullet points. Use standard newline characters (\\n\\n) to create clear paragraph breaks between sections. Include:
+   - 📖 เนื้อหาข่าว (Detailed summary of what happened - at least 3-4 sentences)
    - 🎯 ประเด็นสำคัญ (Key takeaway)
    - 💡 ผลกระทบต่อตลาดคริปโต (Impact on the crypto market/prices)
 5. Determine the sentiment of the news (POSITIVE, NEGATIVE, or NEUTRAL) for the 'sentiment' field.
@@ -128,8 +128,11 @@ def send_to_discord(curated_news, original_news_list):
         sentiment = item.get("sentiment", "NEUTRAL").upper()
         embed_color = colors.get(sentiment, 3447003)
 
-        # Fix literal \n outputted by LLM
+        # Fix literal \n outputted by LLM and force empty lines between sections
         analysis_text = item.get("analysis", "ไม่มีเนื้อหา").replace("\\n", "\n")
+        analysis_text = analysis_text.replace("🎯", "\n\n🎯").replace("💡", "\n\n💡")
+        # Clean up any potential triple newlines
+        analysis_text = analysis_text.replace("\n\n\n", "\n\n")
 
         embed = {
             "title": item.get("title", "ไม่มีหัวข้อ")[:250],
