@@ -1,0 +1,30 @@
+name: Stock News AI Agent
+
+on:
+  schedule:
+    - cron: '0 22,10 * * 1-5' # รันทุกวันจันทร์-ศุกร์ เวลาตี 5 และ 5 โมงเย็น (เวลาไทย)
+  workflow_dispatch: # เปิดให้กดปุ่มรันเองได้
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Stock News Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python main.py
