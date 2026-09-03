@@ -127,9 +127,12 @@ def send_to_discord(curated_news, original_news_list):
         sentiment = item.get("sentiment", "NEUTRAL").upper()
         embed_color = colors.get(sentiment, 3447003)
 
+        # Fix literal \n outputted by LLM
+        analysis_text = item.get("analysis", "ไม่มีเนื้อหา").replace("\\n", "\n")
+
         embed = {
             "title": item.get("title", "ไม่มีหัวข้อ")[:250],
-            "description": (item.get("analysis", "ไม่มีเนื้อหา") + f"\n\n📰 **[อ่านข่าวต้นฉบับ ({source_name})]({original_link})**")[:4000],
+            "description": (analysis_text + f"\n\n📰 **[อ่านข่าวต้นฉบับ ({source_name})]({original_link})**")[:4000],
             "color": embed_color,
             "footer": {
                 "text": "🤖 วิเคราะห์โดย Gemini AI"
