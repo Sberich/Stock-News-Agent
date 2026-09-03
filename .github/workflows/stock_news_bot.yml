@@ -1,8 +1,12 @@
 name: Stock News AI Agent
 
 on:
+  # รันตามเวลาที่กำหนด (ตัวอย่าง: ทุกวันจันทร์-ศุกร์ เวลาตี 5 และ 5 โมงเย็น เวลามาตรฐานสากล UTC)
+  # เวลา UTC ช้ากว่าไทย 7 ชั่วโมง ดังนั้น 22:00 UTC = 05:00 น. ไทย / 10:00 UTC = 17:00 น. ไทย
   schedule:
     - cron: '0 22,10 * * 1-5'
+  
+  # เปิดให้สามารถกดปุ่ม "Run workflow" รันแบบ Manual ได้ตลอดเวลา
   workflow_dispatch:
 
 jobs:
@@ -34,3 +38,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           DISCORD_WEBHOOK_URL_CRYPTO: ${{ secrets.DISCORD_WEBHOOK_URL_CRYPTO }}
         run: python crypto_agent.py
+
+      - name: Run Market Data Agent
+        env:
+          DISCORD_WEBHOOK_URL_MARKET: ${{ secrets.DISCORD_WEBHOOK_URL_MARKET }}
+        run: python market_agent.py
