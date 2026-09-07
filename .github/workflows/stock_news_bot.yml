@@ -41,5 +41,6 @@ jobs:
 
       - name: Run Market Data Agent
         env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           DISCORD_WEBHOOK_URL_MARKET: ${{ secrets.DISCORD_WEBHOOK_URL_MARKET }}
         run: python market_agent.py
