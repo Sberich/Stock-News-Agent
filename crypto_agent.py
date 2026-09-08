@@ -130,7 +130,7 @@ def send_to_discord(curated_news, original_news_list):
 
         # Fix literal \n outputted by LLM and force empty lines between sections
         analysis_text = item.get("analysis", "ไม่มีเนื้อหา").replace("\\n", "\n")
-        analysis_text = analysis_text.replace("🎯", "\n\n🎯").replace("💡", "\n\n💡")
+        analysis_text = analysis_text.replace("🎯", "\n🎯").replace("💡", "\n💡")
         # Clean up any potential triple newlines
         analysis_text = analysis_text.replace("\n\n\n", "\n\n")
 
