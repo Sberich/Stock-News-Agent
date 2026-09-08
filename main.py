@@ -71,8 +71,8 @@ Your task:
 2. For each selected news, TRANSLATE the title into THAI language.
 3. Provide a DETAILED and COMPREHENSIVE analysis translated into THAI language. Do not make it too short.
 4. Format the 'analysis' field to be engaging and easy to read using bullet points. Use standard newline characters (\\n) for line breaks. Include:
-   - 📖 เนื้อหาข่าว (Detailed summary of what happened - at least 3-4 sentences)
-   - 🎯 ประเด็นสำคัญ (Key takeaway)
+   - 📖 เนื้อหาข่าว (Detailed summary of what happened - at least 3-4 sentences) \n
+   - 🎯 ประเด็นสำคัญ (Key takeaway) \n
    - 💡 ผลกระทบต่อนักลงทุน (Detailed impact on markets and investors)
 5. Determine the sentiment of the news (POSITIVE, NEGATIVE, or NEUTRAL) for the 'sentiment' field.
 6. Provide a suitable emoji at the beginning of the 'title' field.
