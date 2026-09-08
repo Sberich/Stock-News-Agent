@@ -70,7 +70,7 @@ Your task:
 1. Select 8 to 12 MOST IMPORTANT news items that have the biggest impact on the US macro economy, investment trends, or major specific tech stocks (like AAPL, TSLA, NVDA). If there are major breaking news, you can select up to 15 items.
 2. For each selected news, TRANSLATE the title into THAI language.
 3. Provide a DETAILED and COMPREHENSIVE analysis translated into THAI language. Do not make it too short.
-4. Format the 'analysis' field to be engaging and easy to read using bullet points. Use standard newline characters (\\n) for line breaks. Include:
+4. Format the 'analysis' field to be engaging and easy to read using bullet points. Use standard newline characters (\\n\\n) for line breaks. Include:
    - 📖 เนื้อหาข่าว (Detailed summary of what happened - at least 3-4 sentences) \n
    - 🎯 ประเด็นสำคัญ (Key takeaway) \n
    - 💡 ผลกระทบต่อนักลงทุน (Detailed impact on markets and investors)
