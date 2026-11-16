@@ -1,10 +1,12 @@
 name: Stock News AI Agent
 
 on:
-  # รันตามเวลาที่กำหนด (ตัวอย่าง: ทุกวันจันทร์-ศุกร์ เวลาตี 5 และ 5 โมงเย็น เวลามาตรฐานสากล UTC)
-  # เวลา UTC ช้ากว่าไทย 7 ชั่วโมง ดังนั้น 22:00 UTC = 05:00 น. ไทย / 10:00 UTC = 17:00 น. ไทย
+  # รันวันละ 2 รอบ ตรงตามจังหวะตลาดหุ้นสหรัฐฯ (เวลา UTC ช้ากว่าไทย 7 ชั่วโมง)
+  # 1) 13:00 UTC = 20:00 น. เวลาไทย (จันทร์-ศุกร์): สรุปข่าวเด่น Pre-Market ก่อนตลาดเปิด
+  # 2) 00:00 UTC = 07:00 น. เวลาไทย (อังคาร-เสาร์): สรุป Morning Recap ตลาดปิดยามเช้า
   schedule:
-    - cron: '47 21,9 * * 1-5'
+    - cron: '0 13 * * 1-5'
+    - cron: '0 0 * * 2-6'
   
   # เปิดให้สามารถกดปุ่ม "Run workflow" รันแบบ Manual ได้ตลอดเวลา
   workflow_dispatch:
@@ -15,6 +17,14 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Restore Sent News Cache
+        uses: actions/cache@v4
+        with:
+          path: sent_news_cache.json
+          key: sent-news-cache-${{ github.run_id }}
+          restore-keys: |
+            sent-news-cache-
 
       - name: Set up Python
         uses: actions/setup-python@v5
