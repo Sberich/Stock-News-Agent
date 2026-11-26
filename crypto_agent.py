@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 from datetime import datetime, timezone
 from google import genai
@@ -11,13 +12,14 @@ from news_utils import (
     format_article_links,
     fetch_rss_feeds,
     send_discord_embeds,
+    generate_gemini_with_fallback,
 )
 
 # ==========================================
 # CONFIGURATION
 # ==========================================
 DISCORD_WEBHOOK_URL_CRYPTO = os.getenv("DISCORD_WEBHOOK_URL_CRYPTO")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "sent_crypto_cache.json")
 
@@ -26,7 +28,6 @@ if not DISCORD_WEBHOOK_URL_CRYPTO or not GEMINI_API_KEY:
 
 if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
-MODEL_ID = "gemini-2.5-flash"
 
 
 class CuratedNewsItem(BaseModel):
@@ -65,20 +66,17 @@ Your task:
 Here is the news list:
 {news_text}
 """
-    try:
-        response = client.models.generate_content(
-            model=MODEL_ID,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=list[CuratedNewsItem],
-                temperature=0.4,
-            ),
-        )
-        return json.loads(response.text.strip())
-    except Exception as e:
-        print(f"Error in AI curation: {e}")
-        return []
+    result_text, used_model = generate_gemini_with_fallback(
+        client,
+        prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=list[CuratedNewsItem],
+            temperature=0.4,
+        ),
+    )
+    print(f"   Curated using model: {used_model}")
+    return json.loads(result_text)
 
 
 def build_discord_embeds(curated_news: list, original_news_list: list) -> list:

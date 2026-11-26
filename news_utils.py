@@ -102,6 +102,33 @@ def fetch_rss_feeds(
     return all_news
 
 
+DEFAULT_MODEL_CANDIDATES = [
+    "gemini-3.8-flash",
+    "gemini-2.5-flash",
+    "gemini-flash-latest",
+]
+
+
+def generate_gemini_with_fallback(client, contents, config=None, models=None):
+    """Calls Gemini generate_content across candidate models, failing fast on auth errors."""
+    candidates = models or DEFAULT_MODEL_CANDIDATES
+    last_err = None
+    for model_id in candidates:
+        try:
+            kwargs = {"model": model_id, "contents": contents}
+            if config is not None:
+                kwargs["config"] = config
+            resp = client.models.generate_content(**kwargs)
+            return resp.text.strip(), model_id
+        except Exception as e:
+            err_str = str(e)
+            last_err = e
+            print(f"Model {model_id} error: {err_str}")
+            if "401" in err_str or "403" in err_str or "UNAUTHENTICATED" in err_str or "API key not valid" in err_str:
+                raise RuntimeError(f"Gemini Authentication Failed (check GEMINI_API_KEY): {err_str}") from e
+    raise RuntimeError(f"All Gemini candidate models failed: {last_err}") from last_err
+
+
 def send_discord_embeds(
     webhook_url: str,
     header_content: str,

@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 from datetime import datetime, timezone
 import yfinance as yf
@@ -12,19 +13,19 @@ from news_utils import (
     format_article_links,
     fetch_rss_feeds,
     send_discord_embeds,
+    generate_gemini_with_fallback,
 )
 
 # ==========================================
 # CONFIGURATION
 # ==========================================
 DISCORD_WEBHOOK_URL_GOLD = os.getenv("DISCORD_WEBHOOK_URL_GOLD")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "sent_gold_cache.json")
 
 if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
-MODEL_ID = "gemini-2.5-flash"
 
 GOLD_MACRO_TICKERS = {
     "GC=F": "Gold Futures ($/oz)",
@@ -115,20 +116,17 @@ Your tasks:
      - 💡 มุมมองนักลงทุน (Takeaway for Gold & US equities)
    - Set 'sentiment' ("POSITIVE", "NEGATIVE", or "NEUTRAL" specifically from Gold's perspective).
 """
-    try:
-        response = client.models.generate_content(
-            model=MODEL_ID,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=GoldReport,
-                temperature=0.4,
-            ),
-        )
-        return json.loads(response.text.strip())
-    except Exception as e:
-        print(f"Error in Gold AI analysis: {e}")
-        return {}
+    result_text, used_model = generate_gemini_with_fallback(
+        client,
+        prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema=GoldReport,
+            temperature=0.4,
+        ),
+    )
+    print(f"   Gold analysis generated using model: {used_model}")
+    return json.loads(result_text)
 
 
 def build_gold_embeds(macro_data: list, report: dict, raw_news: list) -> list:

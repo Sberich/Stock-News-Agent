@@ -6,17 +6,16 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 from google import genai
 
-from news_utils import fetch_rss_feeds
+from news_utils import fetch_rss_feeds, generate_gemini_with_fallback
 
 # ==========================================
 # CONFIGURATION
 # ==========================================
 DISCORD_WEBHOOK_URL_MARKET = os.getenv("DISCORD_WEBHOOK_URL_MARKET")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 
 if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
-MODEL_ID = "gemini-2.5-flash"
 
 # Tickers to track
 INDICES = {
@@ -155,14 +154,12 @@ Please write a sharp, insightful daily market recap & direction outlook in THAI 
 Use markdown bolding and emojis cleanly. Avoid generic filler words.
 """
     try:
-        response = client.models.generate_content(
-            model=MODEL_ID,
-            contents=prompt,
-        )
-        return response.text.strip()
+        text, used_model = generate_gemini_with_fallback(client, prompt)
+        print(f"   Market insight generated with: {used_model}")
+        return text
     except Exception as e:
         print(f"Error in AI market analysis: {e}")
-        return "⚠️ (AI เกิดข้อผิดพลาดในการวิเคราะห์ชั่วคราว)"
+        return f"⚠️ (AI เกิดข้อผิดพลาดในการวิเคราะห์: {e})"
 
 
 def generate_chart(data: list) -> str:
