@@ -5,6 +5,8 @@ import time
 from urllib.parse import urlparse
 import requests
 import feedparser
+from google import genai
+from google.genai import types
 
 DEFAULT_HEADERS = {
     "User-Agent": (
@@ -103,10 +105,19 @@ def fetch_rss_feeds(
 
 
 DEFAULT_MODEL_CANDIDATES = [
+    "gemini-4-hydrogen",
     "gemini-3.8-flash",
     "gemini-2.5-flash",
     "gemini-flash-latest",
 ]
+
+
+def create_gemini_client(api_key: str):
+    """Creates a Gemini client pinned to v1beta (required for JSON mode and latest models)."""
+    return genai.Client(
+        api_key=(api_key or "").strip(),
+        http_options=types.HttpOptions(api_version="v1beta"),
+    )
 
 
 def generate_gemini_with_fallback(client, contents, config=None, models=None):
@@ -126,6 +137,8 @@ def generate_gemini_with_fallback(client, contents, config=None, models=None):
             print(f"Model {model_id} error: {err_str}")
             if "401" in err_str or "403" in err_str or "UNAUTHENTICATED" in err_str or "API key not valid" in err_str:
                 raise RuntimeError(f"Gemini Authentication Failed (check GEMINI_API_KEY): {err_str}") from e
+            if "503" in err_str or "429" in err_str:
+                time.sleep(2)
     raise RuntimeError(f"All Gemini candidate models failed: {last_err}") from last_err
 
 

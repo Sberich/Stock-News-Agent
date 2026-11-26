@@ -12,6 +12,7 @@ from news_utils import (
     format_article_links,
     fetch_rss_feeds,
     send_discord_embeds,
+    create_gemini_client,
     generate_gemini_with_fallback,
 )
 
@@ -26,8 +27,8 @@ CACHE_FILE = os.path.join(os.path.dirname(__file__), "sent_news_cache.json")
 if not DISCORD_WEBHOOK_URL or not GEMINI_API_KEY:
     raise ValueError("Missing API Keys! Please set DISCORD_WEBHOOK_URL and GEMINI_API_KEY as environment variables.")
 
-# Configure Gemini Client
-client = genai.Client(api_key=GEMINI_API_KEY)
+# Configure Gemini Client (v1beta required for JSON schema mode)
+client = create_gemini_client(GEMINI_API_KEY)
 
 
 class CuratedNewsItem(BaseModel):

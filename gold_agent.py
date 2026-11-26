@@ -13,6 +13,7 @@ from news_utils import (
     format_article_links,
     fetch_rss_feeds,
     send_discord_embeds,
+    create_gemini_client,
     generate_gemini_with_fallback,
 )
 
@@ -25,7 +26,7 @@ GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "sent_gold_cache.json")
 
 if GEMINI_API_KEY:
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    client = create_gemini_client(GEMINI_API_KEY)
 
 GOLD_MACRO_TICKERS = {
     "GC=F": "Gold Futures ($/oz)",

@@ -6,7 +6,7 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 from google import genai
 
-from news_utils import fetch_rss_feeds, generate_gemini_with_fallback
+from news_utils import fetch_rss_feeds, create_gemini_client, generate_gemini_with_fallback
 
 # ==========================================
 # CONFIGURATION
@@ -15,7 +15,7 @@ DISCORD_WEBHOOK_URL_MARKET = os.getenv("DISCORD_WEBHOOK_URL_MARKET")
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 
 if GEMINI_API_KEY:
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    client = create_gemini_client(GEMINI_API_KEY)
 
 # Tickers to track
 INDICES = {

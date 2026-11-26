@@ -12,6 +12,7 @@ from news_utils import (
     format_article_links,
     fetch_rss_feeds,
     send_discord_embeds,
+    create_gemini_client,
     generate_gemini_with_fallback,
 )
 
@@ -27,7 +28,7 @@ if not DISCORD_WEBHOOK_URL_CRYPTO or not GEMINI_API_KEY:
     print("Warning: Missing API Keys. Make sure DISCORD_WEBHOOK_URL_CRYPTO and GEMINI_API_KEY are set.")
 
 if GEMINI_API_KEY:
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    client = create_gemini_client(GEMINI_API_KEY)
 
 
 class CuratedNewsItem(BaseModel):
