@@ -1,29 +1,33 @@
 import os
-import feedparser
-import requests
+import json
+from datetime import datetime, timezone
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
-from datetime import datetime, timezone
-import json
-import re
-import time
+
+from news_utils import (
+    load_sent_cache,
+    save_sent_cache,
+    format_article_links,
+    fetch_rss_feeds,
+    send_discord_embeds,
+)
 
 # ==========================================
 # CONFIGURATION
 # ==========================================
-# We will use a new Environment Variable for Crypto Webhook
 DISCORD_WEBHOOK_URL_CRYPTO = os.getenv("DISCORD_WEBHOOK_URL_CRYPTO")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# For local testing, you can temporarily hardcode if needed, but DO NOT commit to GitHub
+CACHE_FILE = os.path.join(os.path.dirname(__file__), "sent_crypto_cache.json")
+
 if not DISCORD_WEBHOOK_URL_CRYPTO or not GEMINI_API_KEY:
     print("Warning: Missing API Keys. Make sure DISCORD_WEBHOOK_URL_CRYPTO and GEMINI_API_KEY are set.")
 
-# Configure Gemini Client
 if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
-MODEL_ID = 'gemini-2.5-flash'
+MODEL_ID = "gemini-2.5-flash"
+
 
 class CuratedNewsItem(BaseModel):
     title: str
@@ -31,52 +35,32 @@ class CuratedNewsItem(BaseModel):
     sentiment: str
     original_index: int
 
+
 # Crypto RSS Feeds to monitor
 RSS_FEEDS = {
     "CoinDesk": "https://www.coindesk.com/arc/outboundfeeds/rss/",
-    "Cointelegraph": "https://cointelegraph.com/rss"
+    "Cointelegraph": "https://cointelegraph.com/rss",
 }
 
-def fetch_rss_headlines():
-    """Fetches top headlines from defined Crypto RSS feeds."""
-    all_news = []
-    for source, url in RSS_FEEDS.items():
-        try:
-            feed = feedparser.parse(url)
-            for entry in feed.entries[:25]:
-                raw_summary = entry.get("summary", "")
-                clean_summary = re.sub(r'<[^>]+>', '', raw_summary)[:400]
-                
-                all_news.append({
-                    "source": source,
-                    "title": entry.title,
-                    "link": entry.link,
-                    "published": entry.get("published", ""),
-                    "summary": clean_summary
-                })
-        except Exception as e:
-            print(f"Error fetching from {source}: {e}")
-    return all_news
 
-def curate_and_summarize_news(news_list):
+def curate_and_summarize_news(news_list: list) -> list:
     """Uses Gemini to pick top crypto news and summarize them in Thai."""
     news_text = ""
     for i, news in enumerate(news_list):
-        news_text += f"[{i+1}] Source: {news['source']} | Title: {news['title']} | Summary: {news['summary']}\n"
+        news_text += f"[{i + 1}] Source: {news['source']} | Title: {news['title']} | Summary: {news['summary']}\n"
 
     prompt = f"""
 You are a world-class Cryptocurrency and Blockchain Analyst.
 Below is a list of recent crypto news headlines and short summaries.
 Your task:
-1. Select 6 to 10 MOST IMPORTANT news items that have the biggest impact on the Crypto market (Bitcoin, Ethereum, major Altcoins, regulation, ETFs, tech upgrades).
-2. For each selected news, TRANSLATE the title into THAI language.
+1. Select 6 to 10 MOST IMPORTANT news items that have the biggest impact on the Crypto market (Bitcoin, Ethereum, major Altcoins, regulation, ETF flows, macro liquidity, tech upgrades).
+2. For each selected news, TRANSLATE the title into THAI language and provide a suitable crypto-related emoji at the beginning.
 3. Provide a DETAILED and COMPREHENSIVE analysis translated into THAI language. Do not make it too short.
-4. Format the 'analysis' field to be engaging and easy to read using bullet points. Use standard newline characters (\\n\\n) to create clear paragraph breaks between sections. Include:
+4. Format the 'analysis' field to be engaging and easy to read using double newline characters (\\n\\n) between sections, and Markdown bold (**text**) for key metrics/tickers. Include:
    - 📖 เนื้อหาข่าว (Detailed summary of what happened - at least 3-4 sentences)
    - 🎯 ประเด็นสำคัญ (Key takeaway)
-   - 💡 ผลกระทบต่อตลาดคริปโต (Impact on the crypto market/prices)
+   - 💡 ผลกระทบต่อตลาดคริปโต (Impact on crypto market/prices and ETF sentiment)
 5. Determine the sentiment of the news (POSITIVE, NEGATIVE, or NEUTRAL) for the 'sentiment' field.
-6. Provide a suitable crypto-related emoji at the beginning of the 'title' field.
 
 Here is the news list:
 {news_text}
@@ -88,34 +72,26 @@ Here is the news list:
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=list[CuratedNewsItem],
-                temperature=0.4
-            )
+                temperature=0.4,
+            ),
         )
-        curated_news = json.loads(response.text.strip())
-        return curated_news
+        return json.loads(response.text.strip())
     except Exception as e:
         print(f"Error in AI curation: {e}")
         return []
 
-def send_to_discord(curated_news, original_news_list):
-    """Sends the formatted news to Discord Webhook using Embeds in chunks of 2."""
-    if not curated_news:
-        print("No news to send.")
-        return
-        
-    if not DISCORD_WEBHOOK_URL_CRYPTO:
-        print("Discord Webhook URL for Crypto is missing. Cannot send.")
-        return
 
+def build_discord_embeds(curated_news: list, original_news_list: list) -> list:
+    """Builds Discord rich embeds with 1-click Thai translation links."""
     colors = {
-        "POSITIVE": 5763719,  # Green
-        "NEGATIVE": 15548997, # Red
-        "NEUTRAL": 3447003    # Blue
+        "POSITIVE": 5763719,   # Green
+        "NEGATIVE": 15548997,  # Red
+        "NEUTRAL": 3447003,    # Blue
     }
 
     embeds = []
-    now_iso = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.000Z')
-    
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
     for item in curated_news:
         orig_idx = int(item.get("original_index", 1)) - 1
         if 0 <= orig_idx < len(original_news_list):
@@ -128,56 +104,57 @@ def send_to_discord(curated_news, original_news_list):
         sentiment = item.get("sentiment", "NEUTRAL").upper()
         embed_color = colors.get(sentiment, 3447003)
 
-        # Fix literal \n outputted by LLM and force empty lines between sections
         analysis_text = item.get("analysis", "ไม่มีเนื้อหา").replace("\\n", "\n")
-        analysis_text = analysis_text.replace("🎯", "\n🎯").replace("💡", "\n💡")
-        # Clean up any potential triple newlines
-        analysis_text = analysis_text.replace("\n\n\n", "\n\n")
+        analysis_text = analysis_text.replace("🎯", "\n🎯").replace("💡", "\n💡").replace("\n\n\n", "\n\n")
+        link_line = format_article_links(source_name, original_link)
 
-        embed = {
+        embeds.append({
             "title": item.get("title", "ไม่มีหัวข้อ")[:250],
-            "description": (analysis_text + f"\n\n📰 **[อ่านข่าวต้นฉบับ ({source_name})]({original_link})**")[:4000],
+            "description": (analysis_text + f"\n\n{link_line}")[:4000],
             "color": embed_color,
             "footer": {
                 "text": "🤖 วิเคราะห์โดย Gemini AI (Crypto Agent)"
             },
-            "timestamp": now_iso
-        }
-        embeds.append(embed)
+            "timestamp": now_iso,
+        })
 
-    chunk_size = 2
-    for i in range(0, len(embeds), chunk_size):
-        chunk = embeds[i:i + chunk_size]
-        payload = {
-            "content": "🪙 **อัปเดตข่าวคริปโต (Crypto News) น่าจับตามองประจำวัน!** 🚀" if i == 0 else "",
-            "embeds": chunk
-        }
+    return embeds
 
-        try:
-            response = requests.post(DISCORD_WEBHOOK_URL_CRYPTO, json=payload)
-            response.raise_for_status()
-            print(f"Successfully sent chunk {i//chunk_size + 1} to Discord!")
-            time.sleep(2)
-        except Exception as e:
-            print(f"Error sending chunk to Discord: {e}")
 
 def main():
-    print("1. Fetching Crypto news...")
-    raw_news = fetch_rss_headlines()
-    print(f"   Found {len(raw_news)} articles.")
-    
+    if not DISCORD_WEBHOOK_URL_CRYPTO or not GEMINI_API_KEY:
+        print("Skipping Crypto Agent: missing DISCORD_WEBHOOK_URL_CRYPTO or GEMINI_API_KEY.")
+        return
+
+    print("1. Loading cache & fetching Crypto news...")
+    sent_cache = load_sent_cache(CACHE_FILE)
+    print(f"   Sent crypto cache has {len(sent_cache)} items.")
+
+    raw_news = fetch_rss_feeds(RSS_FEEDS, sent_cache=sent_cache, max_per_feed=25)
+    print(f"   Found {len(raw_news)} fresh crypto articles.")
+
     if not raw_news:
-        print("Failed to fetch news.")
+        print("No new unseen crypto articles since last run.")
         return
 
     print("2. Sending to AI for curation and summarization...")
     curated_news = curate_and_summarize_news(raw_news)
-    
-    if curated_news:
-        print("3. AI Processing complete. Sending to Discord...")
-        send_to_discord(curated_news, raw_news)
-    else:
-        print("Failed to curate news.")
+
+    if not curated_news:
+        print("Failed to curate crypto news.")
+        return
+
+    print("3. Sending Crypto news to Discord...")
+    embeds = build_discord_embeds(curated_news, raw_news)
+    header = "🪙 **อัปเดตข่าวคริปโต (Crypto News) น่าจับตามองประจำรอบ!** 🚀"
+    if send_discord_embeds(DISCORD_WEBHOOK_URL_CRYPTO, header, embeds, chunk_size=2):
+        for item in curated_news:
+            orig_idx = int(item.get("original_index", 1)) - 1
+            if 0 <= orig_idx < len(raw_news):
+                sent_cache.add(raw_news[orig_idx]["link"])
+        save_sent_cache(CACHE_FILE, sent_cache)
+        print("4. Updated sent crypto cache successfully.")
+
 
 if __name__ == "__main__":
     main()
